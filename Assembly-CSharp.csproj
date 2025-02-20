@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="Assets/Scripts/Spawn.cs" />
     <Compile Include="Assets/Scripts/ApplyForce.cs" />
+    <Compile Include="Assets/Scripts/Move.cs" />
     <Reference Include="UnityEngine">
       <HintPath>/Applications/Unity/Hub/Editor/2022.3.58f1/Unity.app/Contents/Managed/UnityEngine/UnityEngine.dll</HintPath>
     </Reference>

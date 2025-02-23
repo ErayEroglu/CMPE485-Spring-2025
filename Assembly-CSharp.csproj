@@ -688,6 +688,9 @@
     <Reference Include="Unity.VisualScripting.SettingsProvider.Editor">
       <HintPath>/Users/erayeroglu/Project 1/Library/ScriptAssemblies/Unity.VisualScripting.SettingsProvider.Editor.dll</HintPath>
     </Reference>
+    <Reference Include="com.unity.cinemachine.editor">
+      <HintPath>/Users/erayeroglu/Project 1/Library/ScriptAssemblies/com.unity.cinemachine.editor.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.Performance.Profile-Analyzer.Editor">
       <HintPath>/Users/erayeroglu/Project 1/Library/ScriptAssemblies/Unity.Performance.Profile-Analyzer.Editor.dll</HintPath>
     </Reference>
@@ -735,6 +738,9 @@
     </Reference>
     <Reference Include="Unity.VSCode.Editor">
       <HintPath>/Users/erayeroglu/Project 1/Library/ScriptAssemblies/Unity.VSCode.Editor.dll</HintPath>
+    </Reference>
+    <Reference Include="Cinemachine">
+      <HintPath>/Users/erayeroglu/Project 1/Library/ScriptAssemblies/Cinemachine.dll</HintPath>
     </Reference>
     <Reference Include="Unity.VisualScripting.Flow">
       <HintPath>/Users/erayeroglu/Project 1/Library/ScriptAssemblies/Unity.VisualScripting.Flow.dll</HintPath>

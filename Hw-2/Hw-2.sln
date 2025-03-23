@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.StarterAssets", "Unity.StarterAssets.csproj", "{e4782820-9608-5da9-5ed5-3ae179475ea2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{9ef982b8-0596-669a-538e-134f3b553280}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.StarterAssets.Editor", "Unity.StarterAssets.Editor.csproj", "{a2be93d3-ab6f-7fce-ef92-29dd5ff21aab}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "URPWizard", "URPWizard.csproj", "{c451d298-8656-ad73-bf7e-84fda766056f}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "Assembly-CSharp-Editor.csproj", "{97f756be-8ecb-9667-01f9-d90af18a4324}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{e4782820-9608-5da9-5ed5-3ae179475ea2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{e4782820-9608-5da9-5ed5-3ae179475ea2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9ef982b8-0596-669a-538e-134f3b553280}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9ef982b8-0596-669a-538e-134f3b553280}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{a2be93d3-ab6f-7fce-ef92-29dd5ff21aab}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{a2be93d3-ab6f-7fce-ef92-29dd5ff21aab}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{c451d298-8656-ad73-bf7e-84fda766056f}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{c451d298-8656-ad73-bf7e-84fda766056f}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97f756be-8ecb-9667-01f9-d90af18a4324}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97f756be-8ecb-9667-01f9-d90af18a4324}.Debug|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

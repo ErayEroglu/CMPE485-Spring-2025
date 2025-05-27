@@ -18,8 +18,8 @@ public class DynamicObstacle : MonoBehaviour
     
     [Header("Size Variation")]
     public bool enableSizeVariation = false;
-    public Vector3 minScale = Vector3.one;
-    public Vector3 maxScale = Vector3.one * 2f;
+    public Vector3 minScale = Vector3.one * 3f;
+    public Vector3 maxScale = Vector3.one * 6f;
     public float scaleChangeSpeed = 1f;
     
     [Header("Performance Settings")]

@@ -148,7 +148,7 @@ public class TestUIController : MonoBehaviour
                 fpsText.text = $"FPS: {metrics.GetCurrentFPS():F1}";
             
             if (memoryText != null)
-                memoryText.text = $"Memory: {metrics.GetCurrentMemoryUsage() / (1024 * 1024):F1} MB";
+                memoryText.text = $"Memory: {metrics.GetCurrentMemoryUsage() / (1024 * 1024):F1} MB | CPU: {metrics.GetCurrentCPUUsage():F1}%";
         }
         
         // Update agent and obstacle counts
@@ -276,20 +276,28 @@ public class TestUIController : MonoBehaviour
     // Quick spawn methods for immediate testing
     public void QuickSpawnAgents()
     {
-        if (testManager != null && agentCountSlider != null && updateRateSlider != null)
+        if (testManager != null)
         {
-            int count = Mathf.RoundToInt(agentCountSlider.value);
-            float rate = updateRateSlider.value;
+            int count = (agentCountSlider != null) ? Mathf.RoundToInt(agentCountSlider.value) : 100; // Default to 100 agents
+            float rate = (updateRateSlider != null) ? updateRateSlider.value : 0.1f; // Default to 0.1f update rate
             testManager.SpawnAgents(count, rate);
         }
     }
     
     public void QuickSpawnObstacles()
     {
-        if (testManager != null && obstacleCountSlider != null)
+        if (testManager != null)
         {
-            int count = Mathf.RoundToInt(obstacleCountSlider.value);
-            testManager.SpawnObstacles(count);
+            int count = (obstacleCountSlider != null) ? Mathf.RoundToInt(obstacleCountSlider.value) : 10; // Default to 10 obstacles
+            StartCoroutine(testManager.SpawnObstacles(count));
+        }
+    }
+    
+    private void SkipCurrentTest()
+    {
+        if (testManager != null)
+        {
+            testManager.SkipCurrentTest();
         }
     }
     
@@ -301,23 +309,26 @@ public class TestUIController : MonoBehaviour
         {
             switch (e.keyCode)
             {
-                case KeyCode.F1:
+                case KeyCode.A:
                     StartAutomaticTests();
                     break;
-                case KeyCode.F2:
+                case KeyCode.S:
                     StopTests();
                     break;
-                case KeyCode.F3:
+                case KeyCode.D:
                     ClearAllAgents();
                     break;
-                case KeyCode.F4:
+                case KeyCode.F:
                     ExportResults();
                     break;
-                case KeyCode.F5:
+                case KeyCode.G:
                     QuickSpawnAgents();
                     break;
-                case KeyCode.F6:
+                case KeyCode.H:
                     QuickSpawnObstacles();
+                    break;
+                case KeyCode.Q:
+                    SkipCurrentTest();
                     break;
             }
         }
@@ -325,9 +336,10 @@ public class TestUIController : MonoBehaviour
         // Display keyboard shortcuts
         GUILayout.BeginArea(new Rect(10, Screen.height - 120, 300, 110));
         GUILayout.Label("Keyboard Shortcuts:", GUI.skin.box);
-        GUILayout.Label("F1: Start Tests | F2: Stop Tests");
-        GUILayout.Label("F3: Clear All | F4: Export Results");
-        GUILayout.Label("F5: Spawn Agents | F6: Spawn Obstacles");
+        GUILayout.Label("A: Start Tests | S: Stop Tests");
+        GUILayout.Label("D: Clear All | F: Export Results");
+        GUILayout.Label("G: Spawn Agents | H: Spawn Obstacles");
+        GUILayout.Label("Q: Skip Current Test");
         GUILayout.EndArea();
     }
 } 

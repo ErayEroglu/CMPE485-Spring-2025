@@ -40,22 +40,22 @@ After setup, verify everything works:
 
 3. **Test Basic Functionality**:
    - Press Play
-   - Press F5 to spawn some agents
+   - Press G to spawn some agents
    - Agents should move around the scene
 
 4. **Run Performance Tests**:
-   - Press F1 to start automated tests
+   - Press A to start automated tests
    - Check Console for progress updates
    - Results will be saved to `PerformanceResults/` folder
 
 ## Keyboard Controls
 
-- **F1** - Start automated performance tests
-- **F2** - Stop current test
-- **F3** - Clear all agents and obstacles
-- **F4** - Export current results
-- **F5** - Spawn 50 agents
-- **F6** - Spawn 10 obstacles
+- **A** - Start automated performance tests
+- **S** - Stop current test
+- **D** - Clear all agents and obstacles
+- **F** - Export current results
+- **G** - Spawn 50 agents
+- **H** - Spawn 10 obstacles
 
 ## Package Requirements
 
@@ -82,9 +82,9 @@ Results are automatically exported to the `PerformanceResults/` folder in your p
 ## Success Indicators
 
 ✅ **No compilation errors**  
-✅ **Agents spawn and move when pressing F5**  
+✅ **Agents spawn and move when pressing G**  
 ✅ **NavMesh visible as blue areas in Scene view**  
-✅ **Performance tests run when pressing F1**  
+✅ **Performance tests run when pressing A**  
 ✅ **Results export to PerformanceResults folder**  
 ✅ **Real-time performance metrics display during tests**
 
@@ -109,8 +109,8 @@ Results are automatically exported to the `PerformanceResults/` folder in your p
 
 Once setup is complete, you can:
 
-1. **Run Automated Tests**: Press F1 to run all 29 predefined performance tests
-2. **Manual Testing**: Use F5/F6 for quick agent/obstacle spawning
+1. **Run Automated Tests**: Press A to run all 29 predefined performance tests
+2. **Manual Testing**: Use G/H for quick agent/obstacle spawning
 3. **Data Analysis**: Check the exported CSV/JSON files for detailed performance metrics
 4. **Customize Tests**: Modify the test configurations in `PerformanceTestManager.cs`
 

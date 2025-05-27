@@ -14,15 +14,15 @@ public class PerformanceTestManager : MonoBehaviour
     public float spawnRadius = 50f;
     
     [Header("Test Parameters")]
-    public int maxAgents = 1000;
-    public int agentIncrement = 50;
+    public int maxAgents = 1200;
+    public int agentIncrement = 200;
     public float[] updateRates = { 0.1f, 0.05f, 0.02f, 0.01f };
     public int[] obstacleCounts = { 0, 10, 25, 50, 100 };
     
     [Header("Test Control")]
     public bool autoRunTests = false;
-    public float testDuration = 30f;
-    public float warmupTime = 5f;
+    public float testDuration = 6f;
+    public float warmupTime = 1f;
     
     [Header("Performance Monitoring")]
     public bool enableProfiling = true;
@@ -34,6 +34,9 @@ public class PerformanceTestManager : MonoBehaviour
     public TestState currentState = TestState.Idle;
     public int currentTestIndex = 0;
     public List<TestConfiguration> testConfigurations = new List<TestConfiguration>();
+    
+    // Skip test functionality
+    private bool skipCurrentTest = false;
     
     public enum TestState
     {
@@ -57,7 +60,9 @@ public class PerformanceTestManager : MonoBehaviour
     {
         AgentScaling,
         UpdateRateScaling,
-        ObstacleScaling
+        ObstacleScaling,
+        DynamicObstacleScaling,
+        AgentWithDynamicObstacles
     }
     
     private void Start()
@@ -80,8 +85,9 @@ public class PerformanceTestManager : MonoBehaviour
     {
         testConfigurations.Clear();
         
-        // Agent scaling tests
-        for (int agents = agentIncrement; agents <= maxAgents; agents += agentIncrement)
+        // 1) Test agent counts from 10, 100, 200, 400, 600, 1000, 1500, 2000, 5000, 10000
+        int[] agentCounts = { 10, 100, 200, 400, 600, 1000, 1500, 2000, 5000, 10000 };
+        foreach (int agents in agentCounts)
         {
             testConfigurations.Add(new TestConfiguration
             {
@@ -93,29 +99,45 @@ public class PerformanceTestManager : MonoBehaviour
             });
         }
         
-        // Update rate scaling tests
-        foreach (float rate in updateRates)
+        // 2) Test 5 times with increased number of static obstacles (with 600 agents)
+        int[] staticObstacleCounts = { 10, 25, 50, 100, 200 };
+        foreach (int obstacles in staticObstacleCounts)
         {
             testConfigurations.Add(new TestConfiguration
             {
-                testName = $"UpdateRate_{rate:F3}",
-                agentCount = 200,
-                updateRate = rate,
-                obstacleCount = 0,
-                testType = TestType.UpdateRateScaling
-            });
-        }
-        
-        // Obstacle scaling tests
-        foreach (int obstacles in obstacleCounts)
-        {
-            testConfigurations.Add(new TestConfiguration
-            {
-                testName = $"Obstacles_{obstacles}",
-                agentCount = 200,
+                testName = $"StaticObstacles_{obstacles}_Agents600",
+                agentCount = 600,
                 updateRate = 0.1f,
                 obstacleCount = obstacles,
                 testType = TestType.ObstacleScaling
+            });
+        }
+        
+        // 3) Test 5 times with moving and increased number of obstacles (with 600 agents)
+        int[] dynamicObstacleCounts = { 10, 25, 50, 100, 200 };
+        foreach (int obstacles in dynamicObstacleCounts)
+        {
+            testConfigurations.Add(new TestConfiguration
+            {
+                testName = $"DynamicObstacles_{obstacles}_Agents600",
+                agentCount = 600,
+                updateRate = 0.1f,
+                obstacleCount = obstacles,
+                testType = TestType.DynamicObstacleScaling
+            });
+        }
+        
+        // 4) Test with moving obstacles (at highest obstacle count from previous stage) with varying agent counts
+        int[] agentCountsWithMovingObstacles = { 200, 500, 1000, 2000, 5000 };
+        foreach (int agents in agentCountsWithMovingObstacles)
+        {
+            testConfigurations.Add(new TestConfiguration
+            {
+                testName = $"AgentsWithMovingObstacles_{agents}",
+                agentCount = agents,
+                updateRate = 0.1f,
+                obstacleCount = 50, // Highest obstacle count from previous stage
+                testType = TestType.AgentWithDynamicObstacles
             });
         }
     }
@@ -148,31 +170,94 @@ public class PerformanceTestManager : MonoBehaviour
     
     private IEnumerator RunSingleTest(TestConfiguration config)
     {
+        Debug.Log($"Starting test: {config.testName}");
+        float testStartTime = Time.realtimeSinceStartup;
+        skipCurrentTest = false; // Reset skip flag for this test
+        
         // Setup test environment
         SpawnAgents(config.agentCount, config.updateRate);
-        SpawnObstacles(config.obstacleCount);
+        yield return StartCoroutine(SpawnObstacles(config.obstacleCount));
         
-        // Warmup period
-        yield return new WaitForSeconds(warmupTime);
+        // Check for skip during setup
+        if (skipCurrentTest)
+        {
+            Debug.Log($"Test skipped during setup: {config.testName}");
+            yield break;
+        }
+        
+        // Configure obstacles based on test type
+        if (config.testType == TestType.DynamicObstacleScaling || config.testType == TestType.AgentWithDynamicObstacles)
+        {
+            ConfigureDynamicObstacles(true, 2.0f + (config.obstacleCount * 0.1f)); // Increase speed with count
+        }
+        else
+        {
+            ConfigureDynamicObstacles(false, 1.0f); // Static obstacles
+        }
+        
+        // Warmup period - use realtime to ensure exact timing
+        Debug.Log($"Starting warmup for {warmupTime}s");
+        float warmupEndTime = Time.realtimeSinceStartup + warmupTime;
+        while (Time.realtimeSinceStartup < warmupEndTime && !skipCurrentTest)
+        {
+            yield return null;
+        }
+        
+        // Check for skip during warmup
+        if (skipCurrentTest)
+        {
+            Debug.Log($"Test skipped during warmup: {config.testName}");
+            yield break;
+        }
         
         // Start metrics collection
+        Debug.Log($"Starting data collection for {testDuration}s");
         metrics.StartCollection(config.testName);
+        float dataStartTime = Time.realtimeSinceStartup;
         
-        // Run test
-        float testStartTime = Time.time;
-        while (Time.time - testStartTime < testDuration)
+        // Start obstacle update coroutine for dynamic tests
+        Coroutine obstacleUpdateCoroutine = null;
+        if ((config.testType == TestType.DynamicObstacleScaling || config.testType == TestType.AgentWithDynamicObstacles) && config.obstacleCount > 0)
         {
-            // Update dynamic obstacles during test
-            if (config.obstacleCount > 0)
-            {
-                UpdateDynamicObstacles();
-            }
-            
-            yield return new WaitForSeconds(1f);
+            obstacleUpdateCoroutine = StartCoroutine(UpdateDynamicObstaclesCoroutine());
+        }
+        
+        // Run test for exact duration using realtime, but check for skip
+        float testEndTime = Time.realtimeSinceStartup + testDuration;
+        while (Time.realtimeSinceStartup < testEndTime && !skipCurrentTest)
+        {
+            yield return null;
+        }
+        
+        // Stop obstacle updates
+        if (obstacleUpdateCoroutine != null)
+        {
+            StopCoroutine(obstacleUpdateCoroutine);
         }
         
         // Stop metrics collection
         metrics.StopCollection();
+        
+        float totalTestTime = Time.realtimeSinceStartup - testStartTime;
+        float dataCollectionTime = Time.realtimeSinceStartup - dataStartTime;
+        
+        if (skipCurrentTest)
+        {
+            Debug.Log($"Test skipped: {config.testName} | Time before skip: {totalTestTime:F2}s");
+        }
+        else
+        {
+            Debug.Log($"Test completed: {config.testName} | Total time: {totalTestTime:F2}s | Data collection time: {dataCollectionTime:F2}s");
+        }
+    }
+    
+    private IEnumerator UpdateDynamicObstaclesCoroutine()
+    {
+        while (true)
+        {
+            UpdateDynamicObstacles();
+            yield return new WaitForSecondsRealtime(1f); // Update every 1 second realtime
+        }
     }
     
     public void SpawnAgents(int count, float updateRate)
@@ -196,24 +281,140 @@ public class PerformanceTestManager : MonoBehaviour
         }
     }
     
-    public void SpawnObstacles(int count)
+    public IEnumerator SpawnObstacles(int count)
     {
         ClearAllObstacles();
+        
+        if (count == 0) 
+        {
+            yield break;
+        }
+        
+        Debug.Log($"Spawning {count} obstacles...");
         
         for (int i = 0; i < count; i++)
         {
             Vector3 spawnPos = GetRandomSpawnPosition();
+            // Ensure obstacles are positioned at Y = 0.5 (on ground level)
+            spawnPos.y = obstaclePrefab.transform.position.y;
+            
             GameObject obstacle = Instantiate(obstaclePrefab, spawnPos, Quaternion.identity);
+            
+            // Ensure NavMeshObstacle is properly configured and enabled
+            NavMeshObstacle navObstacle = obstacle.GetComponent<NavMeshObstacle>();
+            if (navObstacle != null)
+            {
+                // Make sure it's enabled from the start
+                navObstacle.enabled = true;
+                navObstacle.carving = true;
+                navObstacle.carvingMoveThreshold = 0.1f;
+                navObstacle.carvingTimeToStationary = 0.1f; // Faster carving response
+                navObstacle.shape = NavMeshObstacleShape.Box;
+                navObstacle.center = Vector3.zero;
+                
+                // Set size based on renderer bounds
+                Renderer renderer = obstacle.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    navObstacle.size = renderer.bounds.size;
+                }
+                else
+                {
+                    navObstacle.size = Vector3.one; // Default size
+                }
+                
+                Debug.Log($"Obstacle {i}: NavMeshObstacle enabled={navObstacle.enabled}, carving={navObstacle.carving}, size={navObstacle.size}");
+            }
+            else
+            {
+                Debug.LogError($"Obstacle {i} is missing NavMeshObstacle component!");
+            }
+            
             activeObstacles.Add(obstacle);
+            
+            // Wait a frame between spawning obstacles to let NavMesh update
+            yield return null;
         }
         
-        // Rebuild NavMesh after spawning obstacles
-        if (count > 0)
+        // Force multiple NavMesh rebuilds to ensure obstacles are properly integrated
+        Debug.Log("Rebuilding NavMesh for obstacles...");
+        yield return new WaitForEndOfFrame();
+        
+        NavMeshCompatibility.RebuildNavMesh();
+        yield return new WaitForEndOfFrame();
+        
+        // Second rebuild to ensure all obstacles are accounted for
+        NavMeshCompatibility.RebuildNavMesh();
+        yield return new WaitForEndOfFrame();
+        
+        Debug.Log($"Spawned {count} obstacles and rebuilt NavMesh. Checking obstacle status...");
+        
+        // Verify obstacles are working
+        int workingObstacles = 0;
+        int enabledObstacles = 0;
+        int carvingObstacles = 0;
+        
+        foreach (var obstacle in activeObstacles)
         {
-            NavMeshCompatibility.RebuildNavMesh();
+            if (obstacle != null)
+            {
+                NavMeshObstacle navObs = obstacle.GetComponent<NavMeshObstacle>();
+                if (navObs != null)
+                {
+                    if (navObs.enabled) enabledObstacles++;
+                    if (navObs.carving) carvingObstacles++;
+                    if (navObs.enabled && navObs.carving)
+                    {
+                        workingObstacles++;
+                    }
+                    
+                    Debug.Log($"Obstacle at {obstacle.transform.position}: enabled={navObs.enabled}, carving={navObs.carving}, size={navObs.size}");
+                }
+            }
         }
+        
+        Debug.Log($"Obstacle Summary: Total={count}, Enabled={enabledObstacles}, Carving={carvingObstacles}, Working={workingObstacles}");
+        
+        // Check NavMesh status
+        if (NavMesh.CalculateTriangulation().vertices.Length > 0)
+        {
+            Debug.Log("NavMesh is properly built and has walkable areas.");
+        }
+        else
+        {
+            Debug.LogError("NavMesh appears to be empty or not built!");
+        }
+        
+        // Force all agents to recalculate their paths
+        ForceAgentPathRecalculation();
     }
     
+    private void ConfigureDynamicObstacles(bool enableMovement, float speed)
+    {
+        foreach (var obstacle in activeObstacles)
+        {
+            if (obstacle != null)
+            {
+                var dynamicObstacle = obstacle.GetComponent<DynamicObstacle>();
+                if (dynamicObstacle != null)
+                {
+                    if (enableMovement)
+                    {
+                        dynamicObstacle.movementType = DynamicObstacle.ObstacleMovementType.Random;
+                        dynamicObstacle.SetMoveSpeed(speed);
+                        dynamicObstacle.moveRadius = 15f;
+                        dynamicObstacle.randomizeMovement = true; // Allow randomization for dynamic tests
+                    }
+                    else
+                    {
+                        dynamicObstacle.movementType = DynamicObstacle.ObstacleMovementType.Static;
+                        dynamicObstacle.randomizeMovement = false; // Prevent automatic movement changes
+                    }
+                }
+            }
+        }
+    }
+
     private void UpdateDynamicObstacles()
     {
         foreach (var obstacle in activeObstacles)
@@ -241,10 +442,12 @@ public class PerformanceTestManager : MonoBehaviour
         NavMeshHit hit;
         if (NavMesh.SamplePosition(spawnPos, out hit, 10f, NavMesh.AllAreas))
         {
-            return hit.position;
+            // Return hit position but ensure Y is at ground level (0)
+            return new Vector3(hit.position.x, 0, hit.position.z);
         }
         
-        return spawnArea.position;
+        // Fallback to spawn area position at ground level
+        return new Vector3(spawnArea.position.x, 0, spawnArea.position.z);
     }
     
     public void ClearAllAgents()
@@ -302,6 +505,43 @@ public class PerformanceTestManager : MonoBehaviour
             obstacleCount = obstacleCount,
             testType = TestType.ObstacleScaling
         }));
+    }
+    
+    public void SkipCurrentTest()
+    {
+        if (currentState == TestState.Running)
+        {
+            skipCurrentTest = true;
+            Debug.Log("Skipping current test...");
+        }
+        else
+        {
+            Debug.Log("No test is currently running to skip.");
+        }
+    }
+    
+    private void ForceAgentPathRecalculation()
+    {
+        Debug.Log("Forcing agent path recalculation...");
+        int recalculatedAgents = 0;
+        
+        foreach (var agent in activeAgents)
+        {
+            if (agent != null)
+            {
+                NavMeshAgent navAgent = agent.GetComponent<NavMeshAgent>();
+                if (navAgent != null && navAgent.enabled && navAgent.isOnNavMesh)
+                {
+                    // Force recalculation by setting a new destination
+                    Vector3 currentDestination = navAgent.destination;
+                    navAgent.ResetPath();
+                    navAgent.SetDestination(currentDestination);
+                    recalculatedAgents++;
+                }
+            }
+        }
+        
+        Debug.Log($"Recalculated paths for {recalculatedAgents} agents");
     }
     
     private void OnGUI()

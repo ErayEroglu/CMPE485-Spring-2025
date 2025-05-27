@@ -60,7 +60,7 @@ This MVP allows you to test NavMesh performance under three key scenarios:
 
 5. **Testing**:
    - Press Play
-   - Use keyboard shortcuts (F1-F6) for quick testing
+   - Use keyboard shortcuts (A, S, D, F, G, H) for quick testing
    - Or use UI controls if implemented
    - Results will be exported to `PerformanceResults` folder
 
@@ -85,7 +85,7 @@ This MVP allows you to test NavMesh performance under three key scenarios:
 
 ```csharp
 // Enable auto-run in PerformanceTestManager inspector
-// Or use keyboard shortcut F1
+// Or use keyboard shortcut A
 // Or call via script:
 testManager.StartCoroutine(testManager.RunAllTests());
 ```
@@ -107,12 +107,12 @@ testManager.RunObstacleTest(50);
 
 ### Keyboard Shortcuts
 
-- **F1**: Start automatic tests
-- **F2**: Stop all tests
-- **F3**: Clear all agents and obstacles
-- **F4**: Export results
-- **F5**: Quick spawn agents (based on UI sliders)
-- **F6**: Quick spawn obstacles (based on UI sliders)
+- **A**: Start automatic tests
+- **S**: Stop all tests
+- **D**: Clear all agents and obstacles
+- **F**: Export results
+- **G**: Quick spawn agents (based on UI sliders)
+- **H**: Quick spawn obstacles (based on UI sliders)
 
 ## Test Parameters
 

@@ -9,7 +9,7 @@ public class SceneSetupHelper : MonoBehaviour
 {
     [Header("Auto Setup Configuration")]
     public bool autoSetupOnStart = false;
-    public Vector3 groundSize = new Vector3(100, 1, 100);
+    public Vector3 groundSize = new Vector3(30, 1, 30);
     public Material groundMaterial;
     
     [Header("Prefab Creation")]
@@ -28,11 +28,14 @@ public class SceneSetupHelper : MonoBehaviour
         }
     }
     
-    [ContextMenu("Setup Complete Scene")]
+        [ContextMenu("Setup Complete Scene")]
     public void SetupScene()
     {
         Debug.Log("Setting up NavMesh Performance Test Scene...");
-        
+
+        // Create required tags
+        CreateRequiredTags();
+
         // Create ground plane
         CreateGround();
         
@@ -43,14 +46,20 @@ public class SceneSetupHelper : MonoBehaviour
             CreateObstaclePrefab();
         }
         
+                // Create player controller (needed as target for agents)
+        CreatePlayerController();
+
         // Setup test manager
         if (setupTestManager)
         {
             SetupTestManager();
         }
-        
+
         // Setup NavMesh
         SetupNavMesh();
+        
+        // Setup camera
+        SetupCamera();
         
         Debug.Log("Scene setup complete! You can now run performance tests.");
     }
@@ -87,7 +96,7 @@ public class SceneSetupHelper : MonoBehaviour
     {
         // Create agent GameObject
         GameObject agent = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        agent.name = "TestAgent";
+        agent.name = "Agent";
         
         // Add NavMeshAgent
         NavMeshAgent navAgent = agent.AddComponent<NavMeshAgent>();
@@ -96,10 +105,9 @@ public class SceneSetupHelper : MonoBehaviour
         navAgent.angularSpeed = 120f;
         navAgent.obstacleAvoidanceType = ObstacleAvoidanceType.LowQualityObstacleAvoidance;
         
-        // Add TestAgent script
-        TestAgent testAgent = agent.AddComponent<TestAgent>();
-        testAgent.updateRate = 0.1f;
-        testAgent.enableOptimizations = true;
+        // Add EnemyMovement script (used by PerformanceTestManager)
+        EnemyMovement enemyMovement = agent.AddComponent<EnemyMovement>();
+        enemyMovement.UpdateRate = 0.1f;
         
         // Apply material
         if (agentMaterial != null)
@@ -116,7 +124,7 @@ public class SceneSetupHelper : MonoBehaviour
         
 #if UNITY_EDITOR
         // Save as prefab
-        string prefabPath = "Assets/TestAgent.prefab";
+        string prefabPath = "Assets/Agent.prefab";
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(agent, prefabPath);
         Debug.Log($"Agent prefab created at: {prefabPath}");
         
@@ -134,12 +142,21 @@ public class SceneSetupHelper : MonoBehaviour
         GameObject obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
         obstacle.name = "DynamicObstacle";
         obstacle.tag = "Obstacle";
+        Vector3 obstacleSize = new Vector3(1, 4, 6);
+        obstacle.transform.localScale = obstacleSize;
+        
+        // Position obstacle properly on ground
+        obstacle.transform.position = new Vector3(0, obstacleSize.y / 2.0f, 0);
         
         // Add NavMeshObstacle
         NavMeshObstacle navObstacle = obstacle.AddComponent<NavMeshObstacle>();
         navObstacle.carving = true;
         navObstacle.carvingMoveThreshold = 0.1f;
         navObstacle.carvingTimeToStationary = 0.5f;
+        navObstacle.enabled = true; // Ensure it's enabled by default
+        navObstacle.shape = NavMeshObstacleShape.Box;
+        navObstacle.center = Vector3.zero;
+        navObstacle.size = Vector3.one; // Default size, will be adjusted when spawned
         
         // Add DynamicObstacle script
         DynamicObstacle dynamicObstacle = obstacle.AddComponent<DynamicObstacle>();
@@ -193,9 +210,12 @@ public class SceneSetupHelper : MonoBehaviour
         // Add PerformanceMetrics
         PerformanceMetrics metrics = testManager.AddComponent<PerformanceMetrics>();
         
+        // Add TestUIController for keyboard input handling
+        TestUIController uiController = testManager.AddComponent<TestUIController>();
+        
         // Try to assign prefabs
 #if UNITY_EDITOR
-        string agentPrefabPath = "Assets/TestAgent.prefab";
+        string agentPrefabPath = "Assets/Agent.prefab";
         string obstaclePrefabPath = "Assets/DynamicObstacle.prefab";
         
         GameObject agentPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(agentPrefabPath);
@@ -218,9 +238,37 @@ public class SceneSetupHelper : MonoBehaviour
         manager.spawnArea = testManager.transform;
         manager.spawnRadius = 40f;
         
-        Debug.Log("Test Manager created and configured.");
+        Debug.Log("Test Manager created and configured with UI Controller for keyboard shortcuts.");
     }
     
+    private void CreateRequiredTags()
+    {
+#if UNITY_EDITOR
+        // Create "Obstacle" tag if it doesn't exist
+        SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+        SerializedProperty tagsProp = tagManager.FindProperty("tags");
+        
+        bool obstacleTagExists = false;
+        for (int i = 0; i < tagsProp.arraySize; i++)
+        {
+            if (tagsProp.GetArrayElementAtIndex(i).stringValue == "Obstacle")
+            {
+                obstacleTagExists = true;
+                break;
+            }
+        }
+        
+        if (!obstacleTagExists)
+        {
+            tagsProp.InsertArrayElementAtIndex(0);
+            SerializedProperty newTagProp = tagsProp.GetArrayElementAtIndex(0);
+            newTagProp.stringValue = "Obstacle";
+            tagManager.ApplyModifiedProperties();
+            Debug.Log("Created 'Obstacle' tag.");
+        }
+#endif
+    }
+
     private void SetupNavMesh()
     {
         // Bake NavMesh using compatibility helper
@@ -268,11 +316,18 @@ public class SceneSetupHelper : MonoBehaviour
             return;
         }
         
-        // Position camera for good overview
-        mainCamera.transform.position = new Vector3(0, 30, -30);
-        mainCamera.transform.rotation = Quaternion.Euler(45, 0, 0);
+        // Position camera for top-down view
+        mainCamera.transform.position = new Vector3(0, 30, 0);
+        mainCamera.transform.rotation = Quaternion.Euler(90, 0, 0); // Look straight down
         
-        Debug.Log("Camera positioned for scene overview.");
+        // Add camera follow script
+        CameraFollow cameraFollow = mainCamera.GetComponent<CameraFollow>();
+        if (cameraFollow == null)
+        {
+            cameraFollow = mainCamera.gameObject.AddComponent<CameraFollow>();
+        }
+        
+        Debug.Log("Camera positioned for top-down view with follow script.");
     }
     
 #if UNITY_EDITOR
